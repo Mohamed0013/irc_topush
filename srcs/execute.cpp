@@ -6,19 +6,22 @@
 
 void executePass::executeCmd(Server& server, Client& client, const std::vector<std::string>& args) {
     if (client.get_Isregister()) {
-        client.getSendBuffer() += "462 " + client.get_nake() + " :Unauthorized command (already registered)\r\n";
+        client.getSendBuffer() += ":ft_irc_default 462 " + client.get_nake() + " :Unauthorized command (already registered)\r\n";
         return; 
     }
     if (client.get_fPaa()) {
-        client.getSendBuffer() += "462 * :Unauthorized command (already registered)\r\n"; 
+        std::string str = client.get_nake().empty() ? "*" : client.get_nake();
+        client.getSendBuffer() += ":ft_irc_default 462 " + str + " :Unauthorized command (already registered)\r\n";
         return;
     }
     if (args.empty()) {
-        client.getSendBuffer() += "461 * PASS :Not enough parameters\r\n"; 
+        std::string str = client.get_nake().empty() ? "*" : client.get_nake();
+        client.getSendBuffer() += ":ft_irc_default 461 " + str + " PASS :Not enough parameters\r\n"; 
         return;
     }
     if (server.get_pass() != args[0]) {
-        client.getSendBuffer() += "464 * :Password incorrect\r\n";
+        std::string str = client.get_nake().empty() ? "*" : client.get_nake();
+        client.getSendBuffer() += ":ft_irc_default 464 " + str + " :Password incorrect\r\n";
         client.set_Close(1);
         return ;
     }
@@ -229,7 +232,7 @@ void executeJoin::executeCmd(Server& server, Client& client, const std::vector<s
             std::string msg1 = ":ft_irc_default 331 " + client.get_nake() + " " + newarg[i] + " :No topic is set\r\n";
             std::string msg2 = ":ft_irc_default 353 " + client.get_nake() + " = " + newarg[i] + " :@" + client.get_nake() + "\r\n";
             std::string msg3 = ":ft_irc_default 366 " + client.get_nake() + " " + newarg[i] + " :End of /NAMES list.\r\n";
-            client.getSendBuffer() = packet + msg1 + msg2 + msg3;
+            client.getSendBuffer() += packet + msg1 + msg2 + msg3;
             i++;
         }   
         else {
@@ -294,6 +297,7 @@ void executeJoin::executeCmd(Server& server, Client& client, const std::vector<s
             }
             i++;
         }
+
     }
 }
 //       arg[0]     arg[1]  orr
