@@ -1,0 +1,331 @@
+Here is a complete, evaluation-ready architecture breakdown of your ft_irc server. I have split it into four views: System Architecture, Data Flow, Class Relationships, and Client State Machine.
+1. High-Level System Architecture
+plain
+
+┌─────────────────────────────────────────────────────────────┐
+│                         MAIN THREAD                          │
+│                    (Single-Threaded, epoll)                  │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      Server::run() LOOP                      │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────┐  │
+│  │ epoll_wait  │───▶│   EPOLLIN   │    │    EPOLLOUT     │  │
+│  │  (100ms)    │    │  (readable) │    │   (writable)    │  │
+│  └─────────────┘    └──────┬──────┘    └────────┬────────┘  │
+│                            │                    │           │
+│              ┌─────────────┴─────────────┐      │           │
+│              │                           │       │           │
+│              ▼                           ▼       ▼           │
+│    ┌─────────────────┐        ┌─────────────────────┐         │
+│    │  fd == _serverFd│        │   fd == clientFd   │         │
+│    │  acceptNewClient()│        │  handleClientRead()│         │
+│    │     (NEW)        │        │  handleClientWrite()│        │
+│    └─────────────────┘        └─────────────────────┘         │
+│                                          │                   │
+│                                          ▼                   │
+│                              ┌─────────────────────┐          │
+│                              │    parseInput()     │          │
+│                              │  (tokenize + upper) │          │
+│                              └──────────┬──────────┘          │
+│                                         ▼                    │
+│                              ┌─────────────────────┐          │
+│                              │   exCmd[cmd]->exec  │          │
+│                              │   (Command Pattern) │          │
+│                              └─────────────────────┘          │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      SIGNAL HANDLER                            │
+│  SIGINT / SIGTERM ──▶ signalHandler() ──▶ _running = 0       │
+│  (async-signal-safe, only flips volatile sig_atomic_t)        │
+└─────────────────────────────────────────────────────────────┘
+
+2. Data Flow Diagram (One Full Cycle)
+plain
+
+┌──────────┐      recv()       ┌──────────────┐
+│  CLIENT  │ ─────────────────▶ │  recvBuffer  │
+│  (fd=5)  │   (raw bytes)     │  (Client)    │
+└──────────┘                   └──────┬───────┘
+                                    │
+                                    ▼
+                            ┌──────────────┐
+                            │  find('\n')  │◄──────┐
+                            │  (framing)   │       │
+                            └──────┬───────┘       │
+                                   │               │
+                    ┌──────────────┼───────────────┘
+                    │              ▼
+                    │     ┌──────────────┐
+                    │     │  parseInput  │
+                    │     │  (tokenize)  │
+                    │     └──────┬───────┘
+                    │            │
+                    ▼            ▼
+            ┌──────────┐   ┌──────────────┐
+            │  QUIT    │   │  PRIVMSG     │
+            │  KICK    │   │  JOIN        │
+            │  MODE    │   │  NICK/USER   │
+            └────┬─────┘   └──────┬───────┘
+                 │                │
+                 ▼                ▼
+        ┌──────────────┐   ┌──────────────┐
+        │ set_Close(1) │   │  sendBuffer  │
+        │ removeClient │   │  += "...\r\n"│
+        │   (CLEANUP)  │   └──────┬───────┘
+        └──────────────┘          │
+                                  ▼
+                         ┌──────────────┐
+                         │ epoll_ctl()  │
+                         │  EPOLLOUT    │
+                         └──────┬───────┘
+                                │
+                                ▼
+                         ┌──────────────┐
+                         │ handleClient │
+                         │   Write()    │
+                         │  send()      │
+                         └──────────────┘
+
+3. Class / Container Architecture
+plain
+
+┌─────────────────────────────────────────────────────────────────┐
+│                           SERVER                                │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────────┐ │
+│  │  int _serverFd  │  │  int _epollFd   │  │  std::string    │ │
+│  │  int _port      │  │  struct         │  │     _pass       │ │
+│  │                 │  │  epoll_event    │  │                 │ │
+│  │                 │  │  _events[64]    │  │                 │ │
+│  └─────────────────┘  └─────────────────┘  └──────────────────┘ │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │  std::map<int, Client>          _clients                   ││
+│  │  Key: file descriptor │ Value: Client object              ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │  std::map<std::string, chanel>  All_chanel                 ││
+│  │  Key: "#channel"      │ Value: chanel object                ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │  std::map<std::string, execute*>  exCmd                    ││
+│  │  Key: "JOIN"          │ Value: new executeJoin()            ││
+│  │  Key: "PRIVMSG"       │ Value: new executePrivmsg()         ││
+│  └─────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+                              │
+              ┌───────────────┼───────────────┐
+              ▼               ▼               ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│     CLIENT      │ │     CHANEL      │ │    EXECUTE      │
+│  ┌───────────┐  │ │  ┌───────────┐  │ │  (abstract)     │
+│  │ int Id    │  │ │  │ string    │  │ │                 │
+│  │ string    │  │ │  │  name_    │  │ │  executeCmd()   │
+│  │  UserName │  │ │  │  chanel   │  │ │   (virtual)     │
+│  │ string    │  │ │  │ string    │  │ └─────────────────┘
+│  │  Nakename │  │ │  │  pass_    │  │        ▲
+│  │ string    │  │ │  │  chanel   │  │        │
+│  │  buffrev  │  │ │  │ string    │  │   ┌────┴────┐
+│  │ string    │  │ │  │  topic_   │  │   │         │
+│  │  buffsend │  │ │  │  chenal   │  │  execute  execute
+│  │ bool      │  │ │  │           │  │  Pass     Nick
+│  │  flags    │  │ │  │ bool inv│  │   │         │
+│  │ map<string│  │ │  │ bool top│  │  execute  execute
+│  │  ,chanel*>│  │ │  │ int limit│  │  Join     Privmsg
+│  │  channels │  │ │  │           │  │   │         │
+│  └───────────┘  │ │  │ map<int,  │  │  execute  execute
+│                 │ │  │ Client*>  │  │  Kick     Mode
+│                 │ │  │ all_Cchanel│  │   │         │
+│                 │ │  │           │  │  execute  execute
+│                 │ │  │ map<int,  │  │  Invite   Topic
+│                 │ │  │ Client*>  │  │   │         │
+│                 │ │  │ op_chanel │  │  execute  execute
+│                 │ │  │           │  │  User     Quit
+│                 │ │  │ set<string>│  └─────────────────┘
+│                 │ │  │ wait_list  │
+│                 │ │  └───────────┘  │
+│                 │ └─────────────────┘
+│                 │
+│                 │     ┌──────────────┐
+│                 │     │  chanel*     │
+│                 └────▶│  (pointer)   │
+│                       │  stored in    │
+│                       │  Client's map │
+│                       └──────────────┘
+└─────────────────────────────────────────────────────────────────┘
+
+4. Client Registration State Machine
+This is critical for the 42 eval. The evaluator will test edge cases here.
+plain
+
+                              ┌─────────────┐
+                              │   CONNECT   │
+                              │   (fd open) │
+                              └──────┬──────┘
+                                     │
+                                     ▼
+                    ┌────────────────────────────────┐
+                    │  Must receive in any order:    │
+                    │  PASS (correct) → f_pass = 1   │
+                    │  NICK (unique)  → f_nake = 1   │
+                    │  USER (4 params) → f_user = 1  │
+                    └────────────────┬───────────────┘
+                                     │
+                                     ▼
+                    ┌────────────────────────────────┐
+                    │  WHEN all three flags are TRUE │
+                    │  AND IsRegister == false:      │
+                    │                                │
+                    │  set_Isregister(true)          │
+                    │  send 001 RPL_WELCOME          │
+                    └────────────────┬───────────────┘
+                                     │
+                                     ▼
+                              ┌─────────────┐
+                              │  REGISTERED │
+                              │  IsRegister │
+                              │    = true   │
+                              └──────┬──────┘
+                                     │
+            ┌────────────────────────┼────────────────────────┐
+            │                        │                        │
+            ▼                        ▼                        ▼
+      ┌──────────┐            ┌──────────┐            ┌──────────┐
+      │  PRIVMSG │            │   JOIN   │            │   MODE   │
+      │  (chat)  │            │ (channels)│           │ (+t, +k) │
+      └──────────┘            └──────────┘            └──────────┘
+            │                        │                        │
+            ▼                        ▼                        ▼
+      ┌──────────┐            ┌──────────┐            ┌──────────┐
+      │  QUIT    │            │  PART*   │            │  KICK    │
+      │ (close)  │            │ (leave)  │            │ (remove) │
+      └──────────┘            └──────────┘            └──────────┘
+
+*Note: PART is not implemented in your code; client leaves via QUIT or KICK.
+
+5. Memory / Ownership Diagram
+The evaluator may ask: "Who owns what? Who deletes what?"
+plain
+
+┌─────────────────────────────────────────────────────────────┐
+│                        OWNERSHIP MAP                         │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  [Server] owns:                                              │
+│    ├── _clients (map) ──▶ Client objects (value)             │
+│    ├── All_chanel (map) ──▶ chanel objects (value)          │
+│    └── exCmd (map) ──▶ execute* pointers (HEAP)             │
+│                                                              │
+│  [Client] owns:                                              │
+│    ├── Its own std::string buffers (recv/send)               │
+│    └── chanel_client map ──▶ POINTERS to chanel             │
+│        (these are NON-owning references)                     │
+│                                                              │
+│  [chanel] owns:                                              │
+│    ├── all_Cchanel map ──▶ POINTERS to Client               │
+│    ├── op_chanel map ──▶ POINTERS to Client                 │
+│    └── wait_list set ──▶ std::string nicknames              │
+│                                                              │
+│  [execute*] are owned by Server, deleted in ~Server()       │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+
+Key defense point: "Clients hold pointers to channels, and channels hold pointers to clients. Neither deletes the other. The Server deletes the actual objects. When a client disconnects, removeClient() erases the pointer from the channel's maps first, then erases the client from _clients."
+6. The removeClient() Cleanup Sequence (Zoomed In)
+This is the most complex cleanup path. Know this cold.
+plain
+
+removeClient(fd=5)
+        │
+        ▼
+┌─────────────────────┐
+│ Get client's        │
+│ chanel_client map   │
+│ (all channels they  │
+│  joined)            │
+└──────────┬──────────┘
+           │
+           ▼
+    ┌──────────────┐
+    │ FOR each     │
+    │ channel ptr: │
+    └──────┬───────┘
+           │
+           ▼
+┌─────────────────────┐     ┌─────────────────────┐
+│ 1. Erase fd from    │     │ 2. Erase fd from    │
+│    all_Cchanel      │     │    op_chanel        │
+│    (stop being      │     │    (stop being      │
+│     a member)       │     │     operator)       │
+└──────────┬──────────┘     └─────────────────────┘
+           │
+           ▼
+┌─────────────────────┐
+│ 3. IF channel now   │
+│    empty:            │
+│    - Save name      │
+│    - FOR every other│
+│      client in      │
+│      _clients:      │
+│        erase name   │
+│        from their   │
+│        chanel_client│
+│    - Erase channel  │
+│      from All_chanel│
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│ 4. Clear client's   │
+│    own channel map  │
+│    (no dangling ptrs)│
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────┐
+│ 5. epoll_ctl(DEL,5) │
+│ 6. close(5)         │
+│ 7. _clients.erase(5)│
+└─────────────────────┘
+
+7. Command Dispatch Table (Command Pattern)
+plain
+
+┌──────────┬────────────────────────────┬─────────────────────────────┐
+│ Command  │      Preconditions         │      Side Effects           │
+├──────────┼────────────────────────────┼─────────────────────────────┤
+│ PASS     │ !IsRegister, !f_pass       │ f_pass = 1                   │
+│ NICK     │ f_pass == 1                │ f_nake = 1, check unique     │
+│ USER     │ f_pass == 1, !f_user       │ f_user = 1, set realname     │
+│          │                            │ If all 3 flags → 001 welcome │
+├──────────┼────────────────────────────┼─────────────────────────────┤
+│ PRIVMSG  │ IsRegister == true         │ Appends to targets'         │
+│          │                            │ sendBuffer + EPOLLOUT       │
+│ JOIN     │ IsRegister == true         │ Creates channel if new,      │
+│          │                            │ adds to all_Cchanel, sends   │
+│          │                            │ 331/353/366                  │
+│ KICK     │ IsRegister, is_operator    │ Removes target from channel │
+│          │                            │ maps, broadcasts KICK msg    │
+│ INVITE   │ IsRegister, is_operator    │ Adds nick to wait_list,    │
+│          │                            │ sends INVITE to target       │
+│ MODE     │ IsRegister, is_operator    │ Toggles i/t/k/l/o flags,    │
+│          │                            │ broadcasts MODE msg          │
+│ TOPIC    │ IsRegister, is_member      │ If +t, must be op. Sets      │
+│          │                            │ topic, broadcasts to all     │
+│ QUIT     │ (none)                     │ set_Close(1), clear recv buf │
+└──────────┴────────────────────────────┴─────────────────────────────┘
+
+8. Quick Reference: File Responsibilities
+Table
+File	Responsibility	Evaluator Question
+main.cpp	Validates args, constructs Server, calls run()	"How does the server start?"
+server.cpp	Socket I/O, epoll loop, client lifecycle, containers	"How do you handle 100 clients?"
+client.cpp	Data model for a user: nick, buffers, flags, channel list	"What does a client object store?"
+channel.cpp	Data model for a room: members, ops, topic, modes	"How do you know who is an operator?"
+execute.cpp	IRC protocol logic, replies, error numerics	"What happens on JOIN with a wrong password?"
+Final tip: If the evaluator asks you to draw this on a whiteboard, redraw View 1 (System Architecture) and View 4 (State Machine). Those two diagrams alone prove you understand the concurrency model and the protocol requirements. Everything else is supporting detail.
