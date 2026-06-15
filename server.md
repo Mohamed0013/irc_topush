@@ -1,16 +1,17 @@
 Here is a defense-ready, section-by-section breakdown of server.cpp (and how it ties into the rest of your IRC). Study this, and you will be able to walk the evaluator through every design choice, every edge case, and every line of logic.
+
 1. The Big Picture (say this first)
 
-    "My server is a single-threaded, non-blocking, event-driven IRC daemon. It uses epoll for I/O multiplexing, stores clients and channels in standard containers, and dispatches IRC commands via a Command pattern map. Every design choice is aimed at handling thousands of connections on one thread without leaking memory or hanging on a single slow client."
+   "My server is a single-threaded, non-blocking, event-driven IRC daemon. It uses epoll for I/O multiplexing, stores clients and channels in standard containers, and dispatches IRC commands via a Command pattern map. Every design choice is aimed at handling thousands of connections on one thread without leaking memory or hanging on a single slow client."
 
 2. Static Signal Handling & Graceful Shutdown
-cpp
+   cpp
 
-volatile sig_atomic_t Server::_running = 1;
+volatile sig_atomic_t Server::\_running = 1;
 
 void Server::signalHandler(int sig) {
-    (void)sig;
-    _running = 0;
+(void)sig;
+\_running = 0;
 }
 
 What to say:
@@ -20,14 +21,13 @@ What to say:
     The handler does nothing except flip a flag. It does not close sockets or free memory—signal handlers must be async-signal-safe.
 
 Evaluator trap: "Why not close the socket in the handler?"
-Answer: "Because close() is not async-signal-safe, and we could deadlock or corrupt state. We let the main loop see _running == 0 and clean up normally."
-3. Command Initialization (initCmd)
+Answer: "Because close() is not async-signal-safe, and we could deadlock or corrupt state. We let the main loop see \_running == 0 and clean up normally." 3. Command Initialization (initCmd)
 cpp
 
 void Server::initCmd() {
-    this->exCmd["PASS"] = new executePass();
-    this->exCmd["NICK"] = new executeNick();
-    // ...
+this->exCmd["PASS"] = new executePass();
+this->exCmd["NICK"] = new executeNick();
+// ...
 }
 
 What to say:
@@ -37,20 +37,19 @@ What to say:
     They are allocated on the heap because they have different sizes (polymorphism), and they are destroyed in the destructor to prevent leaks.
 
 Evaluator trap: "Why not just use a switch statement?"
-Answer: "A switch on strings doesn't exist in C++. A map keeps the parser clean, makes adding new commands trivial, and scales better than a long if/else chain."
-4. Constructor & Destructor (RAII)
+Answer: "A switch on strings doesn't exist in C++. A map keeps the parser clean, makes adding new commands trivial, and scales better than a long if/else chain." 4. Constructor & Destructor (RAII)
 cpp
 
-Server::Server(int port, std::string pas) : _port(port), _pass(pas), _serverFd(-1), _epollFd(-1) {
-    // sigaction setup
-    initCmd();
-    initSocket();
+Server::Server(int port, std::string pas) : \_port(port), \_pass(pas), \_serverFd(-1), \_epollFd(-1) {
+// sigaction setup
+initCmd();
+initSocket();
 }
 
 Server::~Server() {
-    // close all client fds
-    // close server fd & epoll fd
-    // delete all execute* objects
+// close all client fds
+// close server fd & epoll fd
+// delete all execute\* objects
 }
 
 What to say:
@@ -59,18 +58,17 @@ What to say:
     The destructor is our safety net: it iterates _clients and close() every fd, closes the server and epoll fds, and deletes every command object. This is RAII—if the server object dies, everything dies with it.
 
 Evaluator trap: "What if a client disconnects unexpectedly? Do you leak the fd?"
-Answer: "No. removeClient() is called on disconnect, which does epoll_ctl(DEL), close(fd), and erases the client from the map. The destructor only catches stragglers at shutdown."
-5. Socket Initialization (initSocket)
+Answer: "No. removeClient() is called on disconnect, which does epoll_ctl(DEL), close(fd), and erases the client from the map. The destructor only catches stragglers at shutdown." 5. Socket Initialization (initSocket)
 cpp
 
 void Server::initSocket() {
-    _serverFd = socket(AF_INET, SOCK_STREAM, 0);
-    setsockopt(_serverFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-    fcntl(_serverFd, F_SETFL, O_NONBLOCK);
-    bind(...);
-    listen(...);
-    _epollFd = epoll_create1(EPOLL_CLOEXEC);
-    // add _serverFd to epoll with EPOLLIN
+\_serverFd = socket(AF_INET, SOCK_STREAM, 0);
+setsockopt(\_serverFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+fcntl(\_serverFd, F_SETFL, O_NONBLOCK);
+bind(...);
+listen(...);
+\_epollFd = epoll_create1(EPOLL_CLOEXEC);
+// add \_serverFd to epoll with EPOLLIN
 }
 
 What to say, line by line:
@@ -81,22 +79,21 @@ What to say, line by line:
     We add only the server fd to epoll initially, with EPOLLIN (read interest only).
 
 Evaluator trap: "Why epoll and not select/poll?"
-Answer: "epoll scales with the number of active descriptors, not the total number. With select, you pass the entire fd set every call—O(n). epoll is O(active). For a school project it's overkill, but it's the correct modern POSIX approach."
-6. The Main Event Loop (run)
+Answer: "epoll scales with the number of active descriptors, not the total number. With select, you pass the entire fd set every call—O(n). epoll is O(active). For a school project it's overkill, but it's the correct modern POSIX approach." 6. The Main Event Loop (run)
 cpp
 
 void Server::run() {
-    while (_running) {
-        int nfds = epoll_wait(_epollFd, _events, 64, 100);
-        for (int i = 0; i < nfds; ++i) {
-            int fd = _events[i].data.fd;
-            if (fd == _serverFd) acceptNewClient();
-            else {
-                if (_events[i].events & EPOLLIN) handleClientRead(fd);
-                if (_events[i].events & EPOLLOUT) handleClientWrite(fd);
-            }
-        }
-    }
+while (\_running) {
+int nfds = epoll_wait(\_epollFd, \_events, 64, 100);
+for (int i = 0; i < nfds; ++i) {
+int fd = \_events[i].data.fd;
+if (fd == \_serverFd) acceptNewClient();
+else {
+if (\_events[i].events & EPOLLIN) handleClientRead(fd);
+if (\_events[i].events & EPOLLOUT) handleClientWrite(fd);
+}
+}
+}
 }
 
 What to say:
@@ -106,16 +103,15 @@ What to say:
     We check EPOLLIN before EPOLLOUT. If a client sent data and then immediately disconnected, handleClientRead will call removeClient, and the subsequent EPOLLOUT check will simply not find that fd in the map anymore (we guard against it).
 
 Evaluator trap: "What if a client is readable and writable at the same time?"
-Answer: "We handle read first. If the client dies during read, we remove them and skip write. If they survive, we then handle write. This prevents writing to a dead socket."
-7. Accepting Clients (acceptNewClient)
+Answer: "We handle read first. If the client dies during read, we remove them and skip write. If they survive, we then handle write. This prevents writing to a dead socket." 7. Accepting Clients (acceptNewClient)
 cpp
 
 void Server::acceptNewClient() {
-    int clientFd = accept(_serverFd, ...);
-    fcntl(clientFd, F_SETFL, O_NONBLOCK);
-    epoll_ctl(_epollFd, EPOLL_CTL_ADD, clientFd, &ev); // EPOLLIN
-    _clients[clientFd] = Client(clientFd);
-    _clients[clientFd].set_host(client_ip);
+int clientFd = accept(\_serverFd, ...);
+fcntl(clientFd, F_SETFL, O_NONBLOCK);
+epoll_ctl(\_epollFd, EPOLL_CTL_ADD, clientFd, &ev); // EPOLLIN
+\_clients[clientFd] = Client(clientFd);
+\_clients[clientFd].set_host(client_ip);
 }
 
 What to say:
@@ -125,12 +121,12 @@ What to say:
     We store the client in _clients keyed by fd. This makes lookup O(1) later.
 
 8. Reading & Framing (handleClientRead)
-cpp
+   cpp
 
 void Server::handleClientRead(int fd) {
-    char buffer[1024];
-    ssize_t bytes = recv(fd, buffer, sizeof(buffer)-1, 0);
-    if (bytes <= 0) { removeClient(fd); return; }
+char buffer[1024];
+ssize_t bytes = recv(fd, buffer, sizeof(buffer)-1, 0);
+if (bytes <= 0) { removeClient(fd); return; }
 
     if (_clients[fd].getRecvBuffer().length() + bytes > 4096)
         { removeClient(fd); return; }
@@ -149,6 +145,7 @@ void Server::handleClientRead(int fd) {
         if (_clients.find(fd) == _clients.end()) return;
         if (this->_clients[fd].get_Close()) { removeClient(fd); return; }
     }
+
 }
 
 What to say—this is a crucial section:
@@ -159,17 +156,16 @@ What to say—this is a crucial section:
     After each command, we check if the client still exists. Commands like QUIT set f_close = 1, and we call removeClient() immediately.
 
 Evaluator trap: "What if a client sends 10 commands in one packet?"
-Answer: "The while-loop extracts and processes every complete command. The last incomplete fragment stays in recvBuffer for the next read."
-9. Command Parsing (parseInput)
+Answer: "The while-loop extracts and processes every complete command. The last incomplete fragment stays in recvBuffer for the next read." 9. Command Parsing (parseInput)
 cpp
 
 void Server::parseInput(int clientFd, const std::string &raw) {
-    // 1. Skip leading spaces
-    // 2. Extract command name (first token)
-    // 3. Convert command to uppercase
-    // 4. If param starts with ':', it's a trailing param (rest of line)
-    // 5. Otherwise split by spaces
-    // 6. Look up in exCmd map and execute
+// 1. Skip leading spaces
+// 2. Extract command name (first token)
+// 3. Convert command to uppercase
+// 4. If param starts with ':', it's a trailing param (rest of line)
+// 5. Otherwise split by spaces
+// 6. Look up in exCmd map and execute
 }
 
 What to say:
@@ -181,13 +177,12 @@ What to say:
     Security check: If the send buffer exceeds 65536 bytes, we disconnect the client. This prevents a slow client from causing unbounded memory growth.
 
 Evaluator trap: "How do you handle unknown commands?"
-Answer: "We reply with 'Unknown command.' and set EPOLLOUT so the client gets immediate feedback."
-10. Writing Data (handleClientWrite)
+Answer: "We reply with 'Unknown command.' and set EPOLLOUT so the client gets immediate feedback." 10. Writing Data (handleClientWrite)
 cpp
 
 void Server::handleClientWrite(int fd) {
-    std::string &response = _clients[fd].getSendBuffer();
-    if (response.empty()) return;
+std::string &response = \_clients[fd].getSendBuffer();
+if (response.empty()) return;
 
     ssize_t sent = send(fd, response.c_str(), response.length(), MSG_NOSIGNAL);
     if (sent < 0) {
@@ -199,6 +194,7 @@ void Server::handleClientWrite(int fd) {
     _clients[fd].clearSendBuffer(sent);
     if (_clients[fd].getSendBuffer().empty())
         modifyEpollState(fd, EPOLLIN);
+
 }
 
 What to say:
@@ -208,28 +204,27 @@ What to say:
     When the buffer is finally empty, we revert to EPOLLIN only. This is an optimization—epoll won't wake us for writability when we have nothing to say.
 
 Evaluator trap: "What if the kernel send buffer is full?"
-Answer: "send() returns -1 with EAGAIN/EWOULDBLOCK. We keep the client and the unsent data, and epoll will trigger EPOLLOUT again when space is available."
-11. Client Removal & Channel Cleanup (removeClient)
+Answer: "send() returns -1 with EAGAIN/EWOULDBLOCK. We keep the client and the unsent data, and epoll will trigger EPOLLOUT again when space is available." 11. Client Removal & Channel Cleanup (removeClient)
 cpp
 
 void Server::removeClient(int fd) {
-    std::map<std::string, chanel*> &clientChannels = _clients[fd].chaneel_clieent();
-    for (chIt = clientChannels.begin(); chIt != clientChannels.end(); ++chIt) {
-        chIt->second->get_All_Cchanel().erase(fd);
-        chIt->second->get_opChanel().erase(fd);
-        if (chIt->second->get_All_Cchanel().empty()) {
-            std::string name = chIt->second->get_namechanel();
-            // erase channel reference from ALL other clients
-            for (cit = _clients.begin(); cit != _clients.end(); ++cit)
-                if (cit->first != fd)
-                    cit->second.chaneel_clieent().erase(name);
-            All_chanel.erase(name);
-        }
-    }
-    clientChannels.clear();
-    epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL);
-    close(fd);
-    _clients.erase(fd);
+std::map<std::string, chanel\*> &clientChannels = \_clients[fd].chaneel_clieent();
+for (chIt = clientChannels.begin(); chIt != clientChannels.end(); ++chIt) {
+chIt->second->get_All_Cchanel().erase(fd);
+chIt->second->get_opChanel().erase(fd);
+if (chIt->second->get_All_Cchanel().empty()) {
+std::string name = chIt->second->get_namechanel();
+// erase channel reference from ALL other clients
+for (cit = \_clients.begin(); cit != \_clients.end(); ++cit)
+if (cit->first != fd)
+cit->second.chaneel_clieent().erase(name);
+All_chanel.erase(name);
+}
+}
+clientChannels.clear();
+epoll_ctl(\_epollFd, EPOLL_CTL_DEL, fd, NULL);
+close(fd);
+\_clients.erase(fd);
 }
 
 What to say:
@@ -240,16 +235,15 @@ What to say:
     This is the most complex function because it touches three containers: the global channel map, the global client map, and per-client channel maps.
 
 Evaluator trap: "What happens to a channel when the last person leaves?"
-Answer: "It is destroyed immediately. We also clean up the pointer from every other client's map so nobody holds a dangling reference."
-12. Channel Creation (cretionChanel)
+Answer: "It is destroyed immediately. We also clean up the pointer from every other client's map so nobody holds a dangling reference." 12. Channel Creation (cretionChanel)
 cpp
 
 void Server::cretionChanel(std::string name, std::string pass, Client &client) {
-    this->All_chanel[name] = chanel();
-    this->All_chanel[name].set_pass(pass);
-    this->All_chanel[name].set_name(name);
-    this->All_chanel[name].add_CTOchanel(client);
-    client.addClientToMaps(name, this->All_chanel[name]);
+this->All_chanel[name] = chanel();
+this->All_chanel[name].set_pass(pass);
+this->All_chanel[name].set_name(name);
+this->All_chanel[name].add_CTOchanel(client);
+client.addClientToMaps(name, this->All_chanel[name]);
 }
 
 What to say:
@@ -258,8 +252,7 @@ What to say:
     Adds the creator as the first member.
     Adds the channel pointer to the client's personal channel map so the client knows which rooms they are in.
 
-(Note: the typo cretionChanel is in the code. If the evaluator points it out, say: "Yes, that's a typo in the function name, it should be createChannel. The logic is correct." Do not bring it up yourself.)
-13. Cross-File Architecture (how they fit together)
+(Note: the typo cretionChanel is in the code. If the evaluator points it out, say: "Yes, that's a typo in the function name, it should be createChannel. The logic is correct." Do not bring it up yourself.) 13. Cross-File Architecture (how they fit together)
 Client (client.cpp): Holds fd, nickname, username, registration flags, recv/send buffers, and a map of joined channels. The server accesses these directly.
 Channel (channel.cpp): Holds name, topic, password, invitation list, limit, and two maps: all_Cchanel (members) and op_chanel (operators). The server queries these for JOIN, KICK, MODE, etc.
 Execute (execute.cpp): Contains the actual IRC logic. When a command needs to send a message to other clients (e.g., a PRIVMSG to a channel), the execute class directly appends to those clients' sendBuffer and calls epoll_ctl(... EPOLL_CTL_MOD ... EPOLLOUT) on their fds. This is necessary because the server loop only sets EPOLLOUT for the client currently being parsed.
@@ -268,16 +261,15 @@ What to say:
     "The server is the orchestrator. It knows nothing about IRC semantics. When it reads a full line, it asks the command map to execute. The command objects know the RFC rules: who can kick whom, what +t means, etc. The server just manages the sockets and the containers."
 
 14. The Makefile (quick mention)
-Your Makefile is standard C++98:
+    Your Makefile is standard C++98:
 
-    c++ compiler, -Wall -Wextra -std=c++98
-    -I./headers for includes
-    Object files compiled from srcs/
-    clean/fclean/re targets
+        c++ compiler, -Wall -Wextra -std=c++98
+        -I./headers for includes
+        Object files compiled from srcs/
+        clean/fclean/re targets
 
 Evaluator trap: "Why -std=c++98?"
-Answer: "42 curriculum requires C++98. We use only standard containers and no C++11 features."
-15. Summary Cheat Sheet (memorize these 5 bullets)
+Answer: "42 curriculum requires C++98. We use only standard containers and no C++11 features." 15. Summary Cheat Sheet (memorize these 5 bullets)
 
     I/O: Single-threaded, non-blocking, epoll-driven. Server fd listens; client fds are read/write events.
     Framing: Read into a 1024B buffer, append to a 4096B-cap string buffer, split on \n, strip \r.
