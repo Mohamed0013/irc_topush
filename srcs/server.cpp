@@ -17,7 +17,6 @@ void Server::initCmd()
     this->exCmd["PASS"] = new executePass();
     this->exCmd["NICK"] = new executeNick();
     this->exCmd["USER"] = new executeUser();
-    this->exCmd["QUIT"] = new executeQuit();
     this->exCmd["PRIVMSG"] = new executePrivmsg();
     this->exCmd["JOIN"] = new executeJoin();
     this->exCmd["KICK"] = new executeKick();

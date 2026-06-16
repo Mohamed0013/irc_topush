@@ -1,8 +1,5 @@
 #include "../headers/execute.hpp"
-
-
 #include "execute.hpp"
-
 
 void executePass::executeCmd(Server& server, Client& client, const std::vector<std::string>& args) {
     if (client.get_Isregister()) {
@@ -22,7 +19,6 @@ void executePass::executeCmd(Server& server, Client& client, const std::vector<s
     if (server.get_pass() != args[0]) {
         std::string str = client.get_nake().empty() ? "*" : client.get_nake();
         client.getSendBuffer() += ":ft_irc_default 464 " + str + " :Password incorrect\r\n";
-        client.set_Close(1);
         return ;
     }
     else {
@@ -32,17 +28,17 @@ void executePass::executeCmd(Server& server, Client& client, const std::vector<s
 
 void executeNick::executeCmd(Server& server, Client& client, const std::vector<std::string>& args) {
     if(client.get_fPaa() == 0){
-        client.getSendBuffer() += "451 * :You have not registered\r\n";
+        client.getSendBuffer() += ":ft_irc_default 451 * :You have not registered\r\n";
         return ;
     }
     if (args.empty()) {
         std::string str = client.get_nake().empty() ? "*" : client.get_nake() ;
-        client.getSendBuffer() += "431 " + str +" Not enough parameters\r\n"; 
+        client.getSendBuffer() += ":ft_irc_default 431 " + str + " :No nickname given\r\n"; 
         return;
     }
     if (args[0][0] == '#' || args[0][0] == '&' || args[0][0] == ':') {
         std::string str = client.get_nake().empty() ? "*" : client.get_nake();
-        client.getSendBuffer() += "432 " + str + " " + args[0] + " :Erroneous nickname\r\n";
+        client.getSendBuffer() += ":ft_irc_default 432 " + str + " " + args[0] + " :Erroneous nickname\r\n";
         return;
     }
     if(client.get_fNake() && client.get_nake() == args[0]){
@@ -52,7 +48,8 @@ void executeNick::executeCmd(Server& server, Client& client, const std::vector<s
         std::map < int , Client>::iterator temp ;
         for (temp =  server.get_mapClient().begin() ; temp!=server.get_mapClient().end() ; ++temp ){
             if(temp->second.get_nake() == args[0]){
-                client.getSendBuffer() += "433 * " + args[0] + " :Nickname is already in use\r\n";
+                std::string str = client.get_nake().empty() ? "*" : client.get_nake();
+                client.getSendBuffer() += ":ft_irc_default 433 " + str + " " + args[0] + " :Nickname is already in use\r\n";
                 return ;
             }
         }
@@ -60,34 +57,34 @@ void executeNick::executeCmd(Server& server, Client& client, const std::vector<s
         client.set_nake(args[0]);
         client.set_fNake(true);
         if(client.get_Isregister() == true){
-            client.getSendBuffer() += ":" + old_nick + " NICK :" + args[0] + "\r\n";
+            std::string nick_broadcast = ":" + old_nick + "!" + client.get_user() + "@" + client.get_host() + " NICK :" + args[0] + "\r\n";
             return ;
         }
         if(client.get_fUser() && client.get_fNake() && client.get_fPaa()){
             client.set_Isregister(true);
-            client.getSendBuffer() += "001 " + args[0] + " :Welcome to the Internet Relay Network " + args[0] + "\r\n";
+            client.getSendBuffer() += ":ft_irc_default 001 " + args[0] + " :Welcome to the Internet Relay Network " + args[0] + "\r\n";
             return ;
         }
     }
 }
 void executeUser::executeCmd(Server& server, Client& client, const std::vector<std::string>& args) {
     if(client.get_fPaa() == 0){
-        client.getSendBuffer() += "451 * :You have not registered\r\n";
+        client.getSendBuffer() += ":ft_irc_default 451 * :You have not registered\r\n";
         return ;
     }
     if (args.empty()) {
         std::string str = client.get_nake().empty() ? "*" : client.get_nake() ;
-        client.getSendBuffer() += "431 " + str +" Not enough parameters\r\n"; 
+        client.getSendBuffer() += ":ft_irc_default 431 " + str +" Not enough parameters\r\n"; 
         return;
     }
     if(args.size() < 4){
-          std::string str = client.get_nake().empty() ? "*" : client.get_nake() ;
-        client.getSendBuffer() += "461 " + str + " USER :Not enough parameters\r\n";
+        std::string str = client.get_nake().empty() ? "*" : client.get_nake() ;
+        client.getSendBuffer() += ":ft_irc_default 461 " + str + " USER :Not enough parameters\r\n";
         return;
     }
     if(client.get_fUser() || client.get_Isregister()){
         std::string prefix = client.get_nake().empty() ? "*" : client.get_nake();
-        client.getSendBuffer() += "462 " + prefix + " :Unauthorized command (already registered)\r\n";
+        client.getSendBuffer() += ":ft_irc_default 462 " + prefix + " :Unauthorized command (already registered)\r\n";
         return;
     }else {
         client.set_user(args[0]);
@@ -95,17 +92,10 @@ void executeUser::executeCmd(Server& server, Client& client, const std::vector<s
         client.set_fUser(true);
         if(client.get_fUser() && client.get_fNake() && client.get_fPaa()){
             client.set_Isregister(true);
-            client.getSendBuffer() += "001 " + args[0] + " :Welcome to the Internet Relay Network " + args[0] + "\r\n";
+            client.getSendBuffer() += ":ft_irc_default 001 " + client.get_nake() + " :Welcome to the Internet Relay Network " + client.get_nake() + "\r\n";
             return ;
         }
     }
-}
-
-void executeQuit::executeCmd(Server& server, Client& client, const std::vector<std::string>& args) {
-    
-    client.set_Close(1);
-    client.getRecvBuffer().clear();
-    
 }
 
 std::vector<std::string> split(const std::string& str, char delimiter)
@@ -146,11 +136,9 @@ void executePrivmsg::executeCmd(Server& server, Client& client, const std::vecto
     {
         p = 0;
         if(newarg[i][0] == '#' || newarg[i][0] == '&'){
-            std::cout << "1 - ana hna" << std::endl;
             std::string packet = ":" + client.get_nake() + "!" + client.get_user() + "@"+ client.get_host()+" PRIVMSG " + newarg[i] + " :" + args[1] + "\r\n";
             std::map <std::string, chanel > :: iterator it  = server.get_Chanel().find(newarg[i]);
             if(it != server.get_Chanel().end()){
-                std::cout << "2 - ana hna" << std::endl;
                 if(it->second.is_member(client.get_Id()) == 0){
                     client.getSendBuffer() += ":localhost 404 " + client.get_nake() + " " + args[0] + " :Cannot send to channel\r\n";
                     return ;
@@ -171,18 +159,17 @@ void executePrivmsg::executeCmd(Server& server, Client& client, const std::vecto
         }
         else
         {
-            std::cout << "3 - ana hna" << std::endl;
             std::map<int , Client> :: iterator it ;
             for(it = server.get_mapClient().begin() ; it != server.get_mapClient().end()  ;++it){
-                if(it->second.get_nake() == newarg[i]){
-                    p = 1 ;
-                    std::string packet = ":" + client.get_nake() + "!" + client.get_user() + "@"+ client.get_host()+" PRIVMSG " + newarg[i] + " :" + args[1] + "\r\n";
-                    it->second.getSendBuffer() += packet;
-                    struct epoll_event ev;   // cheak 
-                    ev.events = EPOLLIN | EPOLLOUT;  // cheak
-                    ev.data.fd = it->first;     // cheak
-                    epoll_ctl(server.get_fdeppol(), EPOLL_CTL_MOD, it->first, &ev); // cheak
-                    break;        
+                if(it->second.get_nake() == newarg[i] && it->second.get_Isregister()){
+                        p = 1 ;
+                        std::string packet = ":" + client.get_nake() + "!" + client.get_user() + "@"+ client.get_host()+" PRIVMSG " + newarg[i] + " :" + args[1] + "\r\n";
+                        it->second.getSendBuffer() += packet;
+                        struct epoll_event ev;   // cheak 
+                        ev.events = EPOLLIN | EPOLLOUT;  // cheak
+                        ev.data.fd = it->first;     // cheak
+                        epoll_ctl(server.get_fdeppol(), EPOLL_CTL_MOD, it->first, &ev); // cheak
+                        break;
                 }
             }
         }
@@ -266,7 +253,7 @@ void executeJoin::executeCmd(Server& server, Client& client, const std::vector<s
                     }
                 }
                 iter->second.get_All_Cchanel()[client.get_Id()] = &client ;
-
+                client.chaneel_clieent()[iter->second.get_namechanel()] = & iter->second ;
                 std::map<int, Client *> ::iterator index ;
                 std::string join_msg = ":" + client.get_nake() + "!" + client.get_user() + "@" + client.get_host() 
                                         + " JOIN :" + server.get_Chanel()[newarg[i]].get_namechanel() + "\r\n";
@@ -461,7 +448,7 @@ void executeInvite::executeCmd(Server& server, Client& client, const std::vector
         }
         std::map <int , Client> :: iterator All_client ; int p = 0 ;
         for(All_client = server.get_mapClient().begin() ; All_client != server.get_mapClient().end() ; ++All_client){
-            if(All_client->second.get_nake() == args[0]){
+            if(All_client->second.get_nake() == args[0] && All_client->second.get_Isregister()){ //
                 p = 1;
                 break;
             }

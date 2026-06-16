@@ -1,5 +1,5 @@
 CC = c++
-CFLAGS = -Wall -Wextra -std=c++98
+CFLAGS = -Wall -Wextra -std=c++98 
 INCLUDE = -I./headers
 NAME = ircserv
 
@@ -28,3 +28,4 @@ fclean: clean
 re: fclean all
 
 .PHONY: all clean fclean re
+.SECONDARY : ${OBJ_FILE}

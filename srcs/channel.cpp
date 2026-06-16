@@ -10,7 +10,6 @@ chanel::chanel(){
     this->operatorr = 0;
     this->limits = INT_MAX;
     this->cheak_pass = 0; // pass 
-    
 }
 
 

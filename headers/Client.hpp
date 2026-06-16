@@ -28,6 +28,7 @@ class Client{
         int f_user ;
         int f_nake ;
         int f_close ;
+        int flag_send ;
 
         std::map <std::string , chanel *> chanel_client ; // chanell ta3 had clietn ;
     public :
@@ -44,6 +45,8 @@ class Client{
         
         bool get_Isregister() ;
         int get_Id() const ;
+        int get_flagMsg() const;
+        void set_flagMsg(int a);
 
         bool get_fPaa() const;
         bool get_fUser() const;

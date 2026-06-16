@@ -28,11 +28,6 @@ class executeUser : public execute {
          void executeCmd(Server& server, Client& client, const std::vector<std::string>& args);
         virtual ~executeUser(){};
 };
-class executeQuit : public execute {
-    public :
-        void executeCmd(Server& server, Client& client, const std::vector<std::string>& args);
-        virtual ~executeQuit(){};
-};
 
 class executePrivmsg : public execute {
     public :

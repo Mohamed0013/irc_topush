@@ -11,6 +11,7 @@ Client::Client(int fd){
     this->f_user = 0 ;
     this->f_nake = 0 ;
     this->f_close = 0 ;
+    this->flag_send = 0;
 }
 Client::Client(){
 
@@ -24,6 +25,14 @@ Client::Client(){
     this->f_user = 0;
     this->f_nake = 0;
     this->f_close = 0;
+    this->flag_send = 0;
+}
+
+int Client::get_flagMsg() const{
+    return this->flag_send;
+}
+void Client::set_flagMsg(int a){
+    this->flag_send = a;
 }
 
 std::string Client::get_user()const {
@@ -107,5 +116,6 @@ std::map<std::string , chanel *> & Client::chaneel_clieent() {
     return this->chanel_client ;
 }
 void Client::addClientToMaps(std::string name , chanel &channel) {
+    std::cout << "ana dkholt chanel " << std::endl;
     this->chanel_client[name] = &channel ;
 }
