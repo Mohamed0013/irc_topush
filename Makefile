@@ -7,6 +7,7 @@ SRCS = srcs/main.cpp \
        srcs/server.cpp \
        srcs/client.cpp \
        srcs/channel.cpp \
+       srcs/bot.cpp \
        srcs/execute.cpp
 
 OBJS = $(SRCS:.cpp=.o)

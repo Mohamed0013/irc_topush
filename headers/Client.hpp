@@ -16,7 +16,7 @@ class chanel ;
 class Client{
     private :
         std::string UserName ;
-        std::string Nakename ;
+        std::string nickname ;
         std::string buffrev ;
         std::string buffsend ;
         std::string Realname ;
@@ -26,7 +26,7 @@ class Client{
         int Id ;
         int f_pass ;
         int f_user ;
-        int f_nake ;
+        int f_nick ;
         int f_close ;
         int flag_send ;
 
@@ -36,7 +36,7 @@ class Client{
         Client(int fd) ;
 
         std::string get_user()  const;
-        std::string get_nake()  const;
+        std::string get_nick()  const;
         std::string get_Realname() const;
         std::string get_host() const ;
 
@@ -50,10 +50,10 @@ class Client{
 
         bool get_fPaa() const;
         bool get_fUser() const;
-        bool get_fNake() const;
+        bool get_fnick() const;
 
         void set_user(const  std::string & str) ;
-        void set_nake(const std::string & str) ;
+        void set_nick(const std::string & str) ;
         void set_Realname(const std::string & str) ;
 
         void set_buff(const std::string & str) ;
@@ -68,7 +68,7 @@ class Client{
 
         void set_fPaa(const int a) ;
         void set_fUser(const int a) ;
-        void set_fNake(const int a) ;
+        void set_fnick(const int a) ;
 
         void clearSendBuffer(size_t len) { buffsend.erase(0, len);}
 

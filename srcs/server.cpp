@@ -1,4 +1,5 @@
 #include "../headers/server.hpp"
+#include "../headers/bot.hpp"
 #include "execute.hpp"
 #include <arpa/inet.h>
 #include <cerrno>
@@ -23,9 +24,16 @@ void Server::initCmd()
     this->exCmd["INVITE"] = new executeInvite();
     this->exCmd["MODE"] = new executeMode();
     this->exCmd["TOPIC"] = new executeTopic();
+    this->exCmd["DCC"] = new executeDcc();
+    this->exCmd["BOT"] = new executeBot();
 }
 
 std::map<int, Client> &Server::get_mapClient()
+{
+    return this->_clients;
+}
+
+const std::map<int, Client> &Server::get_mapClient() const
 {
     return this->_clients;
 }
@@ -38,6 +46,16 @@ const std::string &Server::get_pass() const
 int Server::get_fdeppol() const
 {
     return this->_epollFd;
+}
+
+Bot &Server::getBot()
+{
+    return *_bot;
+}
+
+const Bot &Server::getBot() const
+{
+    return *_bot;
 }
 
 void Server::cretionChanel(std::string name, std::string pass, Client &client)
@@ -55,7 +73,12 @@ std::map<std::string, chanel> &Server::get_Chanel()
     return this->All_chanel;
 }
 
-Server::Server(int port, std::string pas) : _port(port), _pass(pas), _serverFd(-1), _epollFd(-1)
+const std::map<std::string, chanel> &Server::get_Chanel() const
+{
+    return this->All_chanel;
+}
+
+Server::Server(int port, std::string pas) : _port(port), _pass(pas), _serverFd(-1), _epollFd(-1), _bot(NULL)
 {
     struct sigaction sa;
     sa.sa_handler = Server::signalHandler;
@@ -64,6 +87,7 @@ Server::Server(int port, std::string pas) : _port(port), _pass(pas), _serverFd(-
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGTERM, &sa, NULL);
 
+    _bot = new Bot();
     initCmd();
     initSocket();
 }
@@ -81,6 +105,8 @@ Server::~Server()
     {
         delete it->second;
     }
+    delete _bot;
+    _bot = NULL;
 }
 
 void Server::initSocket()

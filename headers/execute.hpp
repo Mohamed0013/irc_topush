@@ -65,3 +65,17 @@ class executeTopic : public execute {
         void executeCmd(Server& server, Client& client, const std::vector<std::string>& args);
         virtual ~executeTopic(){};
 };
+
+// DCC / File Transfer command
+class executeDcc : public execute {
+    public :
+        void executeCmd(Server& server, Client& client, const std::vector<std::string>& args);
+        virtual ~executeDcc(){};
+};
+
+// BOT command
+class executeBot : public execute {
+    public :
+        void executeCmd(Server& server, Client& client, const std::vector<std::string>& args);
+        virtual ~executeBot(){};
+};

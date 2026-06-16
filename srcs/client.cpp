@@ -2,28 +2,28 @@
 #include "../headers/channel.hpp"
 Client::Client(int fd){
     this->UserName = "";
-    this->Nakename = "";
+    this->nickname = "";
     this->Realname = "";
     this->host_ip = "" ;
     this->IsRegister = 0;
     this->Id = fd ;
     this->f_pass = 0 ;
     this->f_user = 0 ;
-    this->f_nake = 0 ;
+    this->f_nick = 0 ;
     this->f_close = 0 ;
     this->flag_send = 0;
 }
 Client::Client(){
 
     this->UserName = "";
-    this->Nakename = "";
+    this->nickname = "";
     this->Realname = "";
     this->host_ip = "" ;
     this->IsRegister = 0 ;
     this->Id = -1 ;
     this->f_pass = 0;
     this->f_user = 0;
-    this->f_nake = 0;
+    this->f_nick = 0;
     this->f_close = 0;
     this->flag_send = 0;
 }
@@ -38,8 +38,9 @@ void Client::set_flagMsg(int a){
 std::string Client::get_user()const {
     return this->UserName ;
 }
-std::string Client::get_nake()const{
-    return this->Nakename ;
+
+std::string Client::get_nick()const{
+    return this->nickname ;
 }
 std::string Client::get_Realname() const{
     return this->Realname ;
@@ -72,8 +73,8 @@ bool Client::get_fPaa() const{
 bool Client::get_fUser() const{
     return this->f_user ;
 }
-bool Client::get_fNake() const{
-    return this->f_nake ;
+bool Client::get_fnick() const{
+    return this->f_nick ;
 }
 
 void Client::set_fPaa(const int a) {
@@ -82,8 +83,8 @@ void Client::set_fPaa(const int a) {
 void Client::set_fUser(const int a) {
     this->f_user = a ; 
 }
-void Client::set_fNake(const int a) {
-    this->f_nake = a ;
+void Client::set_fnick(const int a) {
+    this->f_nick = a ;
 }
 
 void Client::set_Close(const int a) {
@@ -97,8 +98,8 @@ int Client::get_Close() const {
 void Client::set_user(const std::string & str) {
     this->UserName = str;
 }
-void Client::set_nake(const std::string & str){
-     this->Nakename  = str;
+void Client::set_nick(const std::string & str){
+     this->nickname  = str;
 }
 
 void Client::set_host(const std::string & str){

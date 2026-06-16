@@ -1,6 +1,6 @@
 #include "../headers/channel.hpp"
 #include <climits>
-chanel::chanel(){
+chanel::chanel() {
     this->name_chanel = "" ;
     this->pass_chanel = "" ;
     this->topic_chenal ="" ;
@@ -76,6 +76,10 @@ std::map <int , Client *>& chanel::get_opChanel(){
 }
 
 std::map <int , Client *>& chanel::get_All_Cchanel(){
+    return this->all_Cchanel ;
+}
+
+const std::map <int , Client *>& chanel::get_All_Cchanel() const {
     return this->all_Cchanel ;
 }
 

@@ -28,6 +28,7 @@ class chanel{
 
         std::map <int , Client *>& get_opChanel();
         std::map <int , Client *>& get_All_Cchanel();
+        const std::map <int , Client *>& get_All_Cchanel() const;
         std::set <std::string> &get_list() ; 
 
         bool get_password() const ;

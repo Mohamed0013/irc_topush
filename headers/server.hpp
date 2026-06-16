@@ -23,6 +23,7 @@
 
 class execute;
 class chanel;
+class Bot;
 class Server
 {
 private:
@@ -32,6 +33,8 @@ private:
     int _serverFd;
     int _epollFd;
     struct epoll_event _events[64];
+
+    Bot *_bot;
 
     std::map<int, Client> _clients;           // all Client
     std::map<std::string, execute *> exCmd;   // all cmd
@@ -51,9 +54,13 @@ private:
 
 public:
     std::map<int, Client> &get_mapClient();
+    const std::map<int, Client> &get_mapClient() const;
     const std::string &get_pass() const;
     int get_fdeppol() const;
     void setupSignals();
+
+    Bot &getBot();
+    const Bot &getBot() const;
 
     Server(int port, std::string pas);
     ~Server();
@@ -61,6 +68,7 @@ public:
 
     void cretionChanel(std::string name, std::string pass, Client &client);
     std::map<std::string, chanel> &get_Chanel();
+    const std::map<std::string, chanel> &get_Chanel() const;
 };
 
 #include "channel.hpp"
