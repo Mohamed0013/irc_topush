@@ -136,32 +136,31 @@ void Server::modifyEpollState(int fd, uint32_t state)
 
 void Server::removeClient(int fd)
 {
+    // Step 1: Check if client exists
+    std::map<int, Client>::iterator it = _clients.find(fd);
+    if (it == _clients.end())
+        return;
+
+    // Step 2: Remove client from all channels
     std::map<std::string, chanel *> &clientChannels = _clients[fd].chaneel_clieent();
     std::map<std::string, chanel *>::iterator chIt;
     for (chIt = clientChannels.begin(); chIt != clientChannels.end(); ++chIt)
     {
+        // Remove from channel's user list
         chIt->second->get_All_Cchanel().erase(fd);
+        // Remove from channel's operator list
         chIt->second->get_opChanel().erase(fd);
+        // Delete channel if it's empty
         if (chIt->second->get_All_Cchanel().empty())
-        {
-            std::string name = chIt->second->get_namechanel();
-            // Clean up this channel reference from ALL other clients
-            std::map<int, Client>::iterator cit;
-            for (cit = _clients.begin(); cit != _clients.end(); ++cit)
-            {
-                if (cit->first != fd)
-                    cit->second.chaneel_clieent().erase(name);
-            }
-            All_chanel.erase(name);
-        }
+            All_chanel.erase(chIt->second->get_namechanel());
     }
     clientChannels.clear();
 
-    epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL);
-    close(fd);
-    _clients.erase(fd);
+    // Step 3: Cleanup FD
+    epoll_ctl(_epollFd, EPOLL_CTL_DEL, fd, NULL); // Remove from epoll FIRST!
+    close(fd); // Close socket
+    _clients.erase(fd); // Remove from _clients map
 }
-
 void Server::acceptNewClient()
 {
     struct sockaddr_in cli_addr;
