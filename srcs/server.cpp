@@ -86,30 +86,39 @@ Server::~Server()
 
 void Server::initSocket()
 {
+    // Step 1: Create TCP socket
     _serverFd = socket(AF_INET, SOCK_STREAM, 0);
     if (_serverFd < 0)
         throw std::runtime_error("Socket creation failed");
 
+    // Step 2: Set SO_REUSEADDR option
     int opt = 1;
     setsockopt(_serverFd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
+    // Step 3: Set socket to non-blocking mode
     if (fcntl(_serverFd, F_SETFL, O_NONBLOCK) < 0)
         throw std::runtime_error("Fcntl failed");
 
+    // Step 4: Prepare socket address structure
     struct sockaddr_in addr;
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
     addr.sin_port = htons(_port);
 
+    // Step 5: Bind socket to address/port
     if (bind(_serverFd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
         throw std::runtime_error("Bind failed");
+
+    // Step 6: Start listening for connections
     if (listen(_serverFd, SOMAXCONN) < 0)
         throw std::runtime_error("Listen failed");
 
-    _epollFd = epoll_create1(EPOLL_CLOEXEC);
+    // Step 7: Create epoll instance
+    _epollFd = epoll_create(1024);
     if (_epollFd < 0)
         throw std::runtime_error("Epoll creation failed");
 
+    // Step 8: Add server socket to epoll
     struct epoll_event ev;
     ev.events = EPOLLIN;
     ev.data.fd = _serverFd;
@@ -117,7 +126,6 @@ void Server::initSocket()
 
     std::cout << "[+] Server started on port " << _port << " with epoll" << std::endl;
 }
-
 void Server::modifyEpollState(int fd, uint32_t state)
 {
     struct epoll_event ev;
