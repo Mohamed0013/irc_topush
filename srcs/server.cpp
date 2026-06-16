@@ -197,11 +197,12 @@ void Server::acceptNewClient()
 
 void Server::handleClientRead(int fd)
 {
+    // Step 1: Read data into buffer
     char buffer[1024];
     memset(buffer, 0, sizeof(buffer));
-
     ssize_t bytes = recv(fd, buffer, sizeof(buffer) - 1, 0);
 
+    // Step 2: Check if client disconnected
     if (bytes <= 0)
     {
         std::cout << "[NETWORK] Client disconnected. FD: " << fd << std::endl;
@@ -209,27 +210,25 @@ void Server::handleClientRead(int fd)
         return;
     }
 
+    // Step 3: Prevent buffer overflow
     if (_clients[fd].getRecvBuffer().length() + bytes > 4096)
     {
         removeClient(fd);
         return;
     }
 
-    _clients[fd].getRecvBuffer().append(buffer, bytes);
+    // Step 4: Append data to client's receive buffer
+    _clients[fd].getRecvBuffer() += buffer;
 
+    // Step 5: Process all complete commands (ending with \r\n)
     size_t pos;
-    while ((pos = _clients[fd].getRecvBuffer().find('\n')) != std::string::npos)
+    while ((pos = _clients[fd].getRecvBuffer().find("\r\n")) != std::string::npos)
     {
         std::string full_command = _clients[fd].getRecvBuffer().substr(0, pos);
-        // Strip trailing \r if present
-        if (!full_command.empty() && full_command[full_command.length() - 1] == '\r')
-            full_command.erase(full_command.length() - 1);
+        _clients[fd].getRecvBuffer().erase(0, pos + 2);
+        parseInput(fd, full_command);
 
-        _clients[fd].getRecvBuffer().erase(0, pos + 1);
-
-        if (!full_command.empty())
-            parseInput(fd, full_command);
-
+        // Check if command caused client to disconnect
         if (_clients.find(fd) == _clients.end())
             return;
         if (this->_clients[fd].get_Close())
@@ -239,7 +238,6 @@ void Server::handleClientRead(int fd)
         }
     }
 }
-
 void Server::parseInput(int clientFd, const std::string &raw_command)
 {
     std::string cmd_name;
