@@ -163,19 +163,21 @@ void Server::removeClient(int fd)
 }
 void Server::acceptNewClient()
 {
+    // Step 1: Accept the connection
     struct sockaddr_in cli_addr;
     socklen_t cli_len = sizeof(cli_addr);
-
     int clientFd = accept(_serverFd, (struct sockaddr *)&cli_addr, &cli_len);
     if (clientFd < 0)
         return;
 
+    // Step 2: Set new socket to non-blocking
     if (fcntl(clientFd, F_SETFL, O_NONBLOCK) < 0)
     {
         close(clientFd);
         return;
     }
 
+    // Step 3: Add to epoll
     struct epoll_event ev;
     ev.events = EPOLLIN;
     ev.data.fd = clientFd;
@@ -185,6 +187,7 @@ void Server::acceptNewClient()
         return;
     }
 
+    // Step 4: Create Client object and store it
     std::string client_ip = inet_ntoa(cli_addr.sin_addr);
     _clients[clientFd] = Client(clientFd);
     _clients[clientFd].set_Id(clientFd);
