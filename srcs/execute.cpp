@@ -902,8 +902,8 @@ void executeDcc::executeCmd(Server& server, Client& client, const std::vector<st
         return ;
     }
 
-    std::string target_nick = args[0];
-    std::string cmdtype = args[1];
+    std::string target_nick = args[1];
+    std::string cmdtype = args[0];
 
     // Convert cmdtype to uppercase
     for (size_t i = 0; i < cmdtype.size(); i++)
@@ -914,7 +914,7 @@ void executeDcc::executeCmd(Server& server, Client& client, const std::vector<st
     int target_fd = -1;
     for (it = server.get_mapClient().begin(); it != server.get_mapClient().end(); ++it)
     {
-        if (it->second.get_nick() == target_nick)
+        if (it->second.get_nick() == target_nick && it->second.get_Isregister())
         {
             target_fd = it->first;
             break ;
@@ -1000,7 +1000,7 @@ void executeBot::executeCmd(Server& server, Client& client, const std::vector<st
         client.getSendBuffer() += ":" + server.getBot().getNick() + "!" + server.getBot().getUser()
                                 + "@" + server.getBot().getHost() + " PRIVMSG " + client.get_nick()
                                 + " :Usage: BOT <command> [args]. Try BOT help\r\n";
-        return;
+        return ;
     }
 
     std::string cmd = args[0];
@@ -1014,7 +1014,7 @@ void executeBot::executeCmd(Server& server, Client& client, const std::vector<st
         client.getSendBuffer() += ":" + server.getBot().getNick() + "!" + server.getBot().getUser()
                                 + "@" + server.getBot().getHost() + " PRIVMSG " + client.get_nick()
                                 + " :Unknown command. Try BOT help\r\n";
-        return;
+        return ;
     }
 
     // Split response by \r\n and send each line as a PRIVMSG
