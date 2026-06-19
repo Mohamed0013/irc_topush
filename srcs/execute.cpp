@@ -4,6 +4,8 @@
 #include <arpa/inet.h>
 #include <sstream>
 #include <climits>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 void executePass::executeCmd(Server& server, Client& client, const std::vector<std::string>& args) {
     if (client.get_Isregister()) {
@@ -936,6 +938,19 @@ void executeDcc::executeCmd(Server& server, Client& client, const std::vector<st
         if (i > 2)
             dcc_payload += " ";
         dcc_payload += args[i];
+    }
+
+    // For DCC SEND, check the file exists by actually opening it
+    if (cmdtype == "SEND" && args.size() >= 3)
+    {
+        // args[2] = filename
+        int file_fd = open(args[2].c_str(), O_RDONLY);
+        if (file_fd == -1)
+        {
+            client.getSendBuffer() += ":localhost 501 " + client.get_nick() + " :File '" + args[2] + "' does not exist\r\n";
+            return ;
+        }
+        close(file_fd);
     }
 
     // For DCC SEND, format the ip address properly
