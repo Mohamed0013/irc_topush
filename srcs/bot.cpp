@@ -239,8 +239,8 @@ std::string Bot::evaluateExpr(const std::string& expr) const
         size_t pos = clean.find(ops[i], 1); // skip first char in case of negative
         if (pos != std::string::npos && (op_pos == std::string::npos || pos < op_pos))
         {
-            if (i == 0 && pos == 0) continue; // leading '+'
-            if ((i == 1 || i == 4) && pos == 0) continue; // leading '-'
+            if (i == 0 && pos == 0) continue ; // leading '+'
+            if ((i == 1 || i == 4) && pos == 0) continue ; // leading '-'
             op_pos = pos;
             op = ops[i];
         }
@@ -263,7 +263,6 @@ std::string Bot::evaluateExpr(const std::string& expr) const
         if (!std::isdigit(right_str[i]) && !(i == 0 && right_str[i] == '-'))
             return "Error: Invalid number: " + right_str;
 
-    // Use stringstream for conversion (C++98 compatible)
     std::istringstream lss(left_str);
     std::istringstream rss(right_str);
     long left, right;
@@ -275,17 +274,17 @@ std::string Bot::evaluateExpr(const std::string& expr) const
 
     switch (op)
     {
-        case '+': result << (left + right); break;
-        case '-': result << (left - right); break;
-        case '*': result << (left * right); break;
+        case '+': result << (left + right); break ;
+        case '-': result << (left - right); break ;
+        case '*': result << (left * right); break ;
         case '/':
             if (right == 0) return "Error: Division by zero";
             result << (left / right);
-            break;
+            break ;
         case '%':
             if (right == 0) return "Error: Modulo by zero";
             result << (left % right);
-            break;
+            break ;
         default:
             return "Error: Unknown operator";
     }
