@@ -72,6 +72,7 @@ void executeNick::executeCmd(Server& server, Client& client, const std::vector<s
     }
 }
 void executeUser::executeCmd(Server& server, Client& client, const std::vector<std::string>& args) {
+    (void) server ;
     if(client.get_fPaa() == 0){
         client.getSendBuffer() += ":ft_irc_default 451 * :You have not registered\r\n";
         return ;
@@ -135,7 +136,7 @@ void executePrivmsg::executeCmd(Server& server, Client& client, const std::vecto
         client.getSendBuffer() += ":localhost 407  :Too many recipients. Message not delivered.\r\n";
         return ;
     }
-    int i = 0  , p;
+    size_t i = 0  , p;
     while (i < newarg.size())
     {
         p = 0;
@@ -254,7 +255,7 @@ void executeJoin::executeCmd(Server& server, Client& client, const std::vector<s
     } else {
         newPas = split(args[1] , ','); 
     }
-    int  i = 0 ;
+    size_t  i = 0 ;
     while (i < newarg.size())
     {
         if(newarg[i].size() < 2 || (newarg[i][0] != '#' && newarg[i][0] != '&')){
@@ -377,7 +378,7 @@ void executeJoin::executeCmd(Server& server, Client& client, const std::vector<s
                 return ;
             }
             std::map <int, Client *> ::iterator itt ;
-            int i = 0 , p ;
+            size_t i = 0 , p ;
             std::cout <<  newUser.size() << std::endl;
             while (i < newUser.size())
             {
@@ -419,7 +420,7 @@ void executeJoin::executeCmd(Server& server, Client& client, const std::vector<s
 //          arg[0]                        arg[1]                   orr
     // KICK  <channel><channel><channel>  <user> <user> <user>   [<comment>]
     else if(newchanel.size() == newUser.size()){
-        int i = 0 , p;
+        size_t i = 0 , p;
         std::cout <<  newchanel.size() << std::endl;
         while (i  < newchanel.size())
         {
@@ -537,7 +538,7 @@ void executeInvite::executeCmd(Server& server, Client& client, const std::vector
             // index  : 2         3     4
 // MODE #zaza +litki-k secret123 khkjh  dfjkds
 //       0       1
-void execute_mode_k(Server& server,char &sig, Client& client, const std::vector<std::string>& args , int &i){
+void execute_mode_k(Server& server,char &sig, Client& client, const std::vector<std::string>& args , size_t &i){
     if (sig  == 0){
         // all domme likha3lin n7athom 
         return ;
@@ -624,7 +625,7 @@ void execute_mode_i(Server& server,char &sig, Client& client, const std::vector<
     }  
    
 }
-void execute_mode_o(Server& server,char &sig, Client& client, const std::vector<std::string>& args , int &i){
+void execute_mode_o(Server& server,char &sig, Client& client, const std::vector<std::string>& args , size_t &i){
      if (sig  == 0 ){
         // all domme likha3lin n7athom 
         return ;
@@ -690,7 +691,7 @@ void execute_mode_o(Server& server,char &sig, Client& client, const std::vector<
 #include <iostream>
 #include <string>
 #include <climits>
-void execute_mode_l(Server& server,char &sig, Client& client, const std::vector<std::string>&args, int &i){
+void execute_mode_l(Server& server,char &sig, Client& client, const std::vector<std::string>&args, size_t &i){
      if (sig  == 0 ){
         // all domme likha3lin n7athom 
         return ;
@@ -712,7 +713,7 @@ void execute_mode_l(Server& server,char &sig, Client& client, const std::vector<
                 i++;
                 return;
             }
-            int num = atoi(args[i].c_str());
+            size_t num = atoi(args[i].c_str());
             if (it_ch->second.get_limitchanell() == num) {
                 i++;
                 return;
@@ -822,7 +823,7 @@ void executeMode::executeCmd(Server& server, Client& client, const std::vector<s
             client.getSendBuffer() += ":localhost 482 " + client.get_nick() + " " + args[0] + " :You're not channel operator\r\n";
             return ;
         }
-        int i = 0  , index = 2;
+        size_t i = 0  ,  index = 2;
         char sig = 0;
         while (i  < args[1].size())
         {

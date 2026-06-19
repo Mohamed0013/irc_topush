@@ -89,10 +89,10 @@ std::string chanel::get_passwordChanel() const{
 bool chanel::get_password() const{
     return this->cheak_pass;
 }
-int  chanel::get_limitchanell() const {
+size_t  chanel::get_limitchanell() const {
     return this->limits ;
 }   
-void  chanel::set_limit( int a)  {
+void  chanel::set_limit(size_t a)  {
     this->limits = a ;
 }
 

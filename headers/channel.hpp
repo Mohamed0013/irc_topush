@@ -13,7 +13,7 @@ class chanel{
         bool cheak_pass; // pass 
         bool operatorr;
         bool topic;
-        int  limits;
+        size_t  limits;
 
         std::map <int , Client *> all_Cchanel;
         std::map <int , Client *> op_chanel; // ga3 les admin dyal had chanel ;
@@ -38,10 +38,10 @@ class chanel{
         bool is_topic() const ;
         bool flag_topic() const ;
         void set_flag_topic(const int a) ;
-        int  get_limitchanell() const ;
+        size_t  get_limitchanell() const ;
 
         void set_invetation(int a)  ;
-        void set_limit( int a) ;
+        void set_limit( size_t a) ;
 
         bool is_member(int fd ) ;
         bool is_operator(int fd ) ;

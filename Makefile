@@ -1,5 +1,5 @@
 CC = c++
-CFLAGS = -Wall -Wextra -std=c++98 
+CFLAGS = -Wall -Wextra -Werror -std=c++98 
 INCLUDE = -I./headers
 NAME = ircserv
 
